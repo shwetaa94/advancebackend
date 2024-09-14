@@ -28,7 +28,7 @@ export const setupWebSocket = (server) => {
     wss.on('connection', (ws) => {
         const id = generateId(); // Assign a unique ID to the new client
         clients.push({ id, ws }); // Store client information
-
+        ws.send(JSON.stringify({id,flag:true}))
         console.log(`New client connected with ID ${id}`);
 
         // Handle incoming messages from clients
@@ -38,8 +38,7 @@ export const setupWebSocket = (server) => {
                 console.log(text)
                 clients.forEach(client => {
                     if (client.ws.readyState === WebSocket.OPEN && client.id !== id) {
-                        client.ws.send(JSON.stringify({ text }));
-                        console.log("this is the clients", client.id)
+                        client.ws.send(JSON.stringify({ id,text, flag:false }));
                     }
                 });
 

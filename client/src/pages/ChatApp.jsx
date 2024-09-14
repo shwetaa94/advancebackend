@@ -5,6 +5,7 @@ const ChatApp = () => {
   const [messages, setMessages] = useState([]); // 🌟 Store all messages
   const [inputMessage, setInputMessage] = useState(""); // 🛠️ Input for sending message
   const [socket, setSocket] = useState();
+  const [currID, setCurrID] = useState();
 
   // 🚀 On component mount, set up WebSocket connection
   useEffect(() => {
@@ -12,12 +13,15 @@ const ChatApp = () => {
 
     newSocket.onopen = () => {
       console.log("Connection established");
-      //   newSocket.send('Hello Server!');
+      // newSocket.send('Hello Server!');
     };
 
     newSocket.onmessage = (message) => {
       console.log("Message received:", message.data);
-      setMessages((prevMessages) => [...prevMessages, JSON.parse(message.data).text]); // Append new message
+      const parsedData = JSON.parse(message.data);
+      const { text, id, flag } = parsedData;
+      if (flag) setCurrID(id);
+      else setMessages((prevMessages) => [...prevMessages, { id, text }]); // Append new message
     };
 
     newSocket.onclose = () => {
@@ -34,12 +38,16 @@ const ChatApp = () => {
       newSocket.close();
     };
   }, []);
+
   // 🛠️ Function to send message to backend (WebSocket)
   const sendMessage = () => {
     if (inputMessage.trim()) {
-      const message = `User: ${inputMessage}`;
+      const message = inputMessage;
       socket.send(JSON.stringify({ text: message })); // Send message to WebSocket server
-      setMessages((prevMessages) => [...prevMessages, message]); // Update the message list locally
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { id: currID, text: message },
+      ]); // Update the message list locally
       setInputMessage(""); // Clear the input field
     }
   };
@@ -55,9 +63,13 @@ const ChatApp = () => {
             {messages.map((message, index) => (
               <div
                 key={index}
-                className="bg-blue-500 text-white p-2 rounded-md w-max self-start"
+                className={`p-2 rounded-md w-max ${
+                  message.id === currID
+                    ? "bg-green-500 text-white" // Position to the right for current user
+                    : "bg-blue-500 text-white" // Default position for others
+                }`}
               >
-                {message}
+                User ID-{message.id} :: {message.text}
               </div>
             ))}
           </div>
