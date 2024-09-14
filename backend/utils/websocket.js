@@ -28,26 +28,19 @@ export const setupWebSocket = (server) => {
     wss.on('connection', (ws) => {
         const id = generateId(); // Assign a unique ID to the new client
         clients.push({ id, ws }); // Store client information
-        ws.send(JSON.stringify({id,flag:true}))
+        ws.send(JSON.stringify({id,flag:true,clients}))
         console.log(`New client connected with ID ${id}`);
 
         // Handle incoming messages from clients
         ws.on('message', (message) => {
             try {
-                const { text } = JSON.parse(message);
+                const { targetID, text } = JSON.parse(message);
                 console.log(text)
                 clients.forEach(client => {
-                    if (client.ws.readyState === WebSocket.OPEN && client.id !== id) {
+                    if (client.ws.readyState === WebSocket.OPEN && client.id === targetID) {
                         client.ws.send(JSON.stringify({ id,text, flag:false }));
                     }
                 });
-
-                // sendToClient(JSON.stringify({ text })); // Send the message to the targeted client
-
-                // if (targetId && text) {
-                //   console.log(`Received message for client ${targetId}: ${text}`);
-                //   sendToClient(JSON.stringify({ senderId: id, text }), targetId); // Send the message to the targeted client
-                // }
             } catch (error) {
                 console.error('Error handling message:', error);
             }
