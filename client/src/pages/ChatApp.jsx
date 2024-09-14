@@ -4,28 +4,41 @@ import React, { useState, useEffect, useRef } from "react";
 const ChatApp = () => {
   const [messages, setMessages] = useState([]); // 🌟 Store all messages
   const [inputMessage, setInputMessage] = useState(""); // 🛠️ Input for sending message
-  const socketRef = useRef(null); // 🔄 WebSocket reference
+  const [socket, setSocket] = useState();
 
   // 🚀 On component mount, set up WebSocket connection
   useEffect(() => {
-    socketRef.current = new WebSocket("ws://localhost:8080"); // Replace with your WebSocket server URL
+    const newSocket = new WebSocket("ws://localhost:8000");
 
-    // 🛠️ Handle receiving messages from WebSocket
-    socketRef.current.onmessage = (event) => {
-      const newMessage = event.data;
-      setMessages((prevMessages) => [...prevMessages, newMessage]); // Append new message to chat
+    newSocket.onopen = () => {
+      console.log("Connection established");
+      //   newSocket.send('Hello Server!');
     };
+
+    newSocket.onmessage = (message) => {
+      console.log("Message received:", message.data);
+      setMessages((prevMessages) => [...prevMessages, JSON.parse(message.data).text]); // Append new message
+    };
+
+    newSocket.onclose = () => {
+      console.log("Connection closed");
+    };
+
+    newSocket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    setSocket(newSocket);
 
     return () => {
-      socketRef.current.close();
+      newSocket.close();
     };
   }, []);
-
   // 🛠️ Function to send message to backend (WebSocket)
   const sendMessage = () => {
     if (inputMessage.trim()) {
       const message = `User: ${inputMessage}`;
-      socketRef.current.send(message); // Send message to WebSocket server
+      socket.send(JSON.stringify({ text: message })); // Send message to WebSocket server
       setMessages((prevMessages) => [...prevMessages, message]); // Update the message list locally
       setInputMessage(""); // Clear the input field
     }
@@ -38,6 +51,7 @@ const ChatApp = () => {
         <div className="flex-1 bg-gray-200 p-4">
           <h2 className="text-lg font-semibold text-gray-700">Chat Screen</h2>
           <div className="mt-4 space-y-2">
+            {/* Display all messages */}
             {messages.map((message, index) => (
               <div
                 key={index}
