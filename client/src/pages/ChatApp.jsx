@@ -1,32 +1,40 @@
 import React, { useState, useEffect } from "react";
 
-// 📅🚀 ChatApp Component with Single User
 const ChatApp = () => {
-  const [messages, setMessages] = useState([]); // 🌟 Store all messages
-  const [inputMessage, setInputMessage] = useState(""); // 🛠️ Input for sending message
-  const [socket, setSocket] = useState();
-  const [currID, setCurrID] = useState(); // Current user's ID
-  const [targetID, setTargetID] = useState(); // Selected client's ID
-  const [clients, setClients] = useState([]); // List of clients
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState("");
+  const [socket, setSocket] = useState(null);
+  const [currID, setCurrID] = useState(null);
+  const [targetID, setTargetID] = useState(null);
+  const [clients, setClients] = useState([]);
 
   // 🚀 On component mount, set up WebSocket connection
   useEffect(() => {
+    const storedID = localStorage.getItem("clientID");
     const newSocket = new WebSocket("ws://localhost:8000");
 
     newSocket.onopen = () => {
       console.log("Connection established");
+      if (storedID) {
+        // Reuse the stored client ID if available
+        setCurrID(storedID);
+      }
     };
 
     newSocket.onmessage = (message) => {
-      console.log("Message received:", message.data);
       const parsedData = JSON.parse(message.data);
       const { text, id, flag, clients } = parsedData;
+
       if (flag) {
-        const newClients = clients.filter((client) => client.id !== id);
-        setCurrID(id);
-        setClients(newClients);
-    } else {
-          console.log({id,text})
+        // Update the clients list
+        setClients(clients);
+        // If this client has no stored ID, assign the current ID
+        if (!currID) {
+          setCurrID(id);
+          localStorage.setItem("clientID", id); // Save the ID in localStorage
+        }
+      } else {
+        // Append the message to the list
         setMessages((prevMessages) => [...prevMessages, { id, text }]);
       }
     };
@@ -44,26 +52,29 @@ const ChatApp = () => {
     return () => {
       newSocket.close();
     };
-  }, []);
+  }, [currID]);
 
   // 🛠️ Function to send message to backend (WebSocket)
   const sendMessage = () => {
     if (inputMessage.trim()) {
       const message = inputMessage;
-      socket.send(JSON.stringify({ targetID, text: message })); // Send message to WebSocket server
+      socket.send(JSON.stringify({ targetID, text: message }));
       setMessages((prevMessages) => [
         ...prevMessages,
         { id: currID, text: message },
-      ]); // Update the message list locally
-      setInputMessage(""); // Clear the input field
+      ]);
+      setInputMessage("");
     }
   };
 
   // Filter messages based on selected target client
-  const filteredMessages = targetID
-    ? messages.filter((message) => message.id === targetID)
-    : messages;
-
+  // Filter messages based on both the current user's ID and the target ID
+const filteredMessages = messages.filter(
+    (message) => 
+      (message.id === currID && targetID === currID) || // Display current user's messages only when target is self
+      (message.id === targetID) // Display target user's messages when selected
+  );
+  
   return (
     <div className="h-screen flex">
       {/* Sidebar */}
@@ -74,10 +85,7 @@ const ChatApp = () => {
             <div
               key={client.id}
               className="text-lg font-bold text-blue-400 cursor-pointer"
-              onClick={() => {
-                alert(`target id is : ${client.id} and currID is ${currID}`);
-                setTargetID(client.id);
-              }}
+              onClick={() => setTargetID(client.id)}
             >
               {client.id}
             </div>
@@ -98,18 +106,14 @@ const ChatApp = () => {
                   ? "bg-green-500 text-white self-end"
                   : "bg-blue-500 text-white"
               }`}
-              style={{
-                alignSelf: message.id === currID ? "flex-end" : "flex-start",
-              }}
             >
               User ID-{message.id} :: {message.text}
             </div>
           ))}
         </div>
 
-        {/* 🔄 Input Section at the Bottom */}
+        {/* Input Section */}
         <div className="mt-4 bg-white flex justify-center items-center p-4">
-          {/* ✏️ Input for Sending Messages */}
           <div className="flex items-center flex-1 max-w-xl">
             <input
               type="text"
