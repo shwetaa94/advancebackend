@@ -38,11 +38,11 @@ export const setupWebSocket = (server) => {
         // Handle incoming messages from clients
         ws.on('message', (message) => {
             try {
-                const { targetID, text } = JSON.parse(message);
+                const {currID, targetID, text } = JSON.parse(message);
                 console.log(text);
                 clients.forEach((client) => {
                     if (client.ws.readyState === WebSocket.OPEN && client.id === targetID) {
-                        client.ws.send(JSON.stringify({ id, text, flag: false }));
+                        client.ws.send(JSON.stringify({ from:currID ,to:targetID, text, flag: false }));
                     }
                 });
             } catch (error) {

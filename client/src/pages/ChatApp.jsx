@@ -2,12 +2,28 @@ import React, { useState, useEffect } from "react";
 
 const ChatApp = () => {
   const [messages, setMessages] = useState([]);
+  const [filteredMsg, setFilteredMsg] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [socket, setSocket] = useState(null);
   const [currID, setCurrID] = useState(null);
   const [targetID, setTargetID] = useState(null);
   const [clients, setClients] = useState([]);
 
+  // Filter messages based on selected target client
+  // Filter messages based on both the current user's ID and the target ID
+  useEffect(()=>{
+    const filteredMessages = messages.filter(
+        (message)=>{
+            //(1 is curr)
+            // user 1->3 
+            if(message.from ===currID && message.to === targetID) return message;
+            //user 3->1  
+            else if(message.from === targetID && message.to === currID) return message
+        }
+      );
+      console.log(filteredMessages)
+      setFilteredMsg([...filteredMessages])
+  },[messages,targetID])
   // 🚀 On component mount, set up WebSocket connection
   useEffect(() => {
     const storedID = localStorage.getItem("clientID");
@@ -23,19 +39,16 @@ const ChatApp = () => {
 
     newSocket.onmessage = (message) => {
       const parsedData = JSON.parse(message.data);
-      const { text, id, flag, clients } = parsedData;
+      const { id ,from, to, text, flag, clients } = parsedData;
 
       if (flag) {
         // Update the clients list
         setClients(clients);
         // If this client has no stored ID, assign the current ID
-        if (!currID) {
-          setCurrID(id);
-          localStorage.setItem("clientID", id); // Save the ID in localStorage
-        }
+        setCurrID(id);
       } else {
         // Append the message to the list
-        setMessages((prevMessages) => [...prevMessages, { id, text }]);
+        setMessages((prevMessages) => [...prevMessages, { from, to, text }]);
       }
     };
 
@@ -52,28 +65,23 @@ const ChatApp = () => {
     return () => {
       newSocket.close();
     };
-  }, [currID]);
+  }, []);
 
   // 🛠️ Function to send message to backend (WebSocket)
   const sendMessage = () => {
     if (inputMessage.trim()) {
       const message = inputMessage;
-      socket.send(JSON.stringify({ targetID, text: message }));
+      socket.send(JSON.stringify({ currID, targetID, text: message }));
       setMessages((prevMessages) => [
         ...prevMessages,
-        { id: currID, text: message },
+        { from: currID, to:targetID, text: message },
       ]);
       setInputMessage("");
     }
   };
 
-  // Filter messages based on selected target client
-  // Filter messages based on both the current user's ID and the target ID
-const filteredMessages = messages.filter(
-    (message) => 
-      (message.id === currID && targetID === currID) || // Display current user's messages only when target is self
-      (message.id === targetID) // Display target user's messages when selected
-  );
+ 
+
   
   return (
     <div className="h-screen flex">
@@ -84,7 +92,7 @@ const filteredMessages = messages.filter(
           {clients.map((client) => (
             <div
               key={client.id}
-              className="text-lg font-bold text-blue-400 cursor-pointer"
+              className={(targetID===client.id)?`text-lg font-bold text-blue-400 cursor-pointer`:`text-lg font-bold text-green-400 cursor-pointer`}
               onClick={() => setTargetID(client.id)}
             >
               {client.id}
@@ -98,16 +106,16 @@ const filteredMessages = messages.filter(
         <h2 className="text-lg font-semibold text-gray-700">Chat Screen</h2>
         <div className="flex-1 overflow-y-auto mt-4">
           {/* Display all messages */}
-          {filteredMessages.map((message, index) => (
+          {filteredMsg.map((message, index) => (
             <div
               key={index}
               className={`p-2 rounded-md w-max ${
-                message.id === currID
+                message.from === currID
                   ? "bg-green-500 text-white self-end"
                   : "bg-blue-500 text-white"
               }`}
             >
-              User ID-{message.id} :: {message.text}
+              User ID-{message.from} : {message.text}
             </div>
           ))}
         </div>
