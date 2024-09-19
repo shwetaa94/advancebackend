@@ -14,30 +14,30 @@ app.get('/', (req, res) => {
 });
 
 app.post('/generate-otp', (req, res) => {
-    const { user, email } = req.body;
-    if (!user || !email) return res.status(400).json({ message: "Email is required" });
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore[email] = otp;
+    console.log("ttp set for: "+email +" is: "+otpStore[email] +" :; "+otp)
 
-    // Set a timeout to delete the OTP after 2 minutes (120000 milliseconds)
-    setTimeout(() => {
-        delete otpStore[email];
-        console.log(`OTP for ${email} has been deleted after 2 minutes.`);
-    }, 120000); // 2 minutes
-
-    res.status(200).json({ message: "OTP generated successfully", otp });
+    // // Set a timeout to delete the OTP after 2 minutes (120000 milliseconds)
+    // setTimeout(() => {
+    //     delete otpStore[email];
+    //     console.log(`OTP for ${email} has been deleted after 10 minutes.`);
+    // }, 600000); // 10 minutes
+    
+    res.status(200).json({ message: "OTP generated successfully : ", otp });
 });
 
-app.post('/reset-pass', (req, res) => {
-    const { user, email, otp } = req.body;
-    if (!user || !email) return res.status(400).json({ message: "Email is required" });
-
-    if (otpStore[email] !== otp) {
+app.post('/reset-password', (req, res) => {
+    const {email, otp, newPass } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (otpStore[req.body.email] !== otp) {
         return res.status(400).json({ message: "Wrong OTP" });
     }
 
-    return res.status(200).json({ message: "OTP verified successfully" });
+    return res.status(200).json({ message: `Password set to ${newPass}` });
 });
 
 // Start the server on port 8000
